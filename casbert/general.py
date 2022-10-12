@@ -44,11 +44,6 @@ STEM_LANCASTER = 1
 IS_LOWER = True
 IS_LEMMA = True
 
-# RETRIVAL ALGORITHMS
-ALG_BOOL = 0
-ALG_BM25 = 1
-ALG_CASBERT = 2
-
 
 class MATH_FORMAT(Enum):
     """MATH DESTINATION"""
@@ -290,4 +285,3 @@ def mml2tex(text):
         if '\\multicolumn{2}{c}' in latex_code:
             latex_code = latex_code.replace('\\multicolumn{2}{c}', ' & ')
     return latex_code
-

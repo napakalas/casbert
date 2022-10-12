@@ -32,5 +32,15 @@ An interface to search for cellml, variables, images, and sedml.
   ```
   
 ### Description
-CASBERT implements SentenceTransformer to represent entities and queries as embeddings. An entity is annotated with composite annotation to provide copmplete description.
+This package is used to search for variables, maths, biosimulation models, images, etc, in the Physiome Model Repository (PMR). The approach is named Compsite Annotation Search using BERT (CASBERT) which implements SentenceTransformer to represent entities and queries as embeddings. An entity is annotated with composite annotation to provide copmplete description. 
+
+### Related repositories
+[CASBERT experiment](https://github.com/napakalas/casbert-experiment.git)
+
+[CASBERT index development](https://github.com/napakalas/casbert-indexer.git)
+
+[Search Engine Implementation](https://github.com/napakalas/bmse.git)
+
+### Search Engine Demo
+BMSE: [http://search.bm-se.cloud.edu.au/](http://search.bm-se.cloud.edu.au/)
   

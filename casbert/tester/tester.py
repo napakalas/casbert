@@ -1,6 +1,6 @@
 # from ..searcher.searcher import Searcher
 from .. import Searcher
-from ..general import ALG_CASBERT, m_c2p, MATH_FORMAT
+from ..general import m_c2p, MATH_FORMAT
 from IPython.display import HTML, Markdown, display
 import logging
 import string
@@ -10,7 +10,7 @@ from shutil import copyfile
 
 class Tester:
     def __init__(self):
-        self.searcher = Searcher(algorithm=ALG_CASBERT)
+        self.searcher = Searcher(algorithm=Searcher.ALG_CASBERT)
         self.viewTemplate = string.Template("""
             <hr style="height:2px;border:none;color:#333;background-color:#333;" />
             <details>

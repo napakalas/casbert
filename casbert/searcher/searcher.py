@@ -13,27 +13,21 @@ from sentence_transformers import SentenceTransformer, util
 
 
 class PmrIndex:
-    def __init__(self, idsFile, classesFile, tensorClass, tensorClassPredicate, algorithm=ALG_CASBERT):
-        if algorithm == ALG_CASBERT:
-            self._entityIds = loadJson(RESOURCE_DIR, idsFile)
-            self._entityClasses = {} if classesFile == None else loadJson(
-                RESOURCE_DIR, classesFile)
-            location = os.path.join(CURRENT_PATH, RESOURCE_DIR)
-            self._entityEmbedding = {
-                'class': torch.load(location+'/'+tensorClass, map_location=torch.device('cpu')),
-                'class_predicate': [] if tensorClassPredicate == None else torch.load(location+'/'+tensorClassPredicate, map_location=torch.device('cpu'))}
+    def __init__(self, idsFile, classesFile, tensorClass):
+        self._entityIds = loadJson(RESOURCE_DIR, idsFile)
+        self._entityClasses = {} if classesFile == None else loadJson(
+            RESOURCE_DIR, classesFile)
+        location = os.path.join(CURRENT_PATH, RESOURCE_DIR)
+        self._entityEmbedding = torch.load(
+            location+'/'+tensorClass, map_location=torch.device('cpu'))
 
-            BERTModel = 'multi-qa-MiniLM-L6-cos-v1'
-            self._model = SentenceTransformer(BERTModel)
-            self._algorithm = algorithm
+        BERTModel = 'multi-qa-MiniLM-L6-cos-v1'
+        self._model = SentenceTransformer(BERTModel)
 
-    def searchEntities(self, query, topK, minSim, indexType='class'):
-        if self._algorithm == ALG_CASBERT:
-            return self._entitySearch(query, topK, minSim, indexType)
+    def searchEntities(self, query, topK, minSim):
+        return self._entitySearch(query, topK, minSim)
 
-        return []
-
-    def _entitySearch(self, query, topK, minSim, indexType='class'):
+    def _entitySearch(self, query, topK, minSim):
         """
         In this approach:
         1. Get vector of query
@@ -43,7 +37,7 @@ class PmrIndex:
         textEmbedding = self._model.encode(query, convert_to_tensor=True)
         # We use cosine-similarity and torch.topk to find the highest top_k scores
         cosScores = util.pytorch_cos_sim(
-            textEmbedding, self._entityEmbedding[indexType])[0]
+            textEmbedding, self._entityEmbedding)[0]
         topResults = torch.topk(cosScores, k=topK)
         results = []
         for rank, (score, idx) in enumerate(zip(topResults[0], topResults[1])):
@@ -54,19 +48,21 @@ class PmrIndex:
 
 
 class Searcher:
-    def __init__(self, algorithm=ALG_CASBERT):
+    # RETRIVAL ALGORITHMS
+    ALG_BOOL = 0
+    ALG_BM25 = 1
+    ALG_CASBERT = 2
+
+    IDX_CLASS = 'class'
+    IDX_CLASS_PREDICATE = 'class_predicate'
+
+    def __init__(self, algorithm=ALG_CASBERT, indexType=IDX_CLASS):
         """Initialise ...
 
         Parameters
         ----------
-        idxCellmlFile : str
-            The name of the cellml file index.
-        idxSedmlFile : str
-            The name of the sedml file index.
-        idxWorkspaceFile : str
-            The name of the workspace file index.
-        idxWorkspaceFile : str
-            The name of the workspace file index.
+        algorithm ==> [Searcher.ALG_BOOL, Searcher.ALG_BM25, Searcher.ALG_CASBERT]
+        indexType ==> [Searcher.IDX_CLASS, Searcher.IDX_CLASS_PREDICATE]
         ....
 
         Returns
@@ -75,20 +71,32 @@ class Searcher:
             a list of strings used that are the header columns
         """
         self.algorithm = algorithm
-        self.idxVar = PmrIndex('casbert_pmr_variable_ids.json',
-                               'casbert_pmr_variable_classes.json',
-                               'casbert_pmr_variable_tensor_class.pt',
-                               'casbert_pmr_variable_tensor_class_predicate.pt')
-        self.idxCellml = PmrIndex('casbert_pmr_cellml_urls.json', None,
-                                  'casbert_pmr_cellml_tensor_class.pt', None)
-        self.idxSedml = PmrIndex('casbert_pmr_sedml_ids.json', None,
-                                 'casbert_pmr_sedml_tensor_class.pt', None)
-        self.idxImage = PmrIndex('casbert_pmr_image_ids.json', None,
-                                 'casbert_pmr_image_tensor_class.pt', None)
-        self.idxComp = PmrIndex('casbert_pmr_component_ids.json',
-                                'casbert_pmr_component_classes.json',
-                                'casbert_pmr_component_tensor_class.pt',
-                                'casbert_pmr_component_tensor_class_predicate.pt')
+        if indexType == Searcher.IDX_CLASS:
+            self.idxVar = PmrIndex('casbert_pmr_variable_ids.json',
+                                   'casbert_pmr_variable_classes.json',
+                                   'casbert_pmr_variable_tensor_class.pt')
+            self.idxCellml = PmrIndex('casbert_pmr_cellml_urls.json', None,
+                                      'casbert_pmr_cellml_tensor_class.pt')
+            self.idxSedml = PmrIndex('casbert_pmr_sedml_ids.json', None,
+                                     'casbert_pmr_sedml_tensor_class.pt')
+            self.idxImage = PmrIndex('casbert_pmr_image_ids.json', None,
+                                     'casbert_pmr_image_tensor_class.pt')
+            self.idxComp = PmrIndex('casbert_pmr_component_ids.json',
+                                    'casbert_pmr_component_classes.json',
+                                    'casbert_pmr_component_tensor_class.pt')
+        elif indexType == Searcher.IDX_CLASS_PREDICATE:
+            self.idxVar = PmrIndex('casbert_pmr_variable_ids.json',
+                                   'casbert_pmr_variable_classes.json',
+                                   'casbert_pmr_variable_tensor_class_predicate.pt')
+            self.idxCellml = PmrIndex('casbert_pmr_cellml_urls.json', None,
+                                      'casbert_pmr_cellml_tensor_class.pt')
+            self.idxSedml = PmrIndex('casbert_pmr_sedml_ids.json', None,
+                                     'casbert_pmr_sedml_tensor_class.pt')
+            self.idxImage = PmrIndex('casbert_pmr_image_ids.json', None,
+                                     'casbert_pmr_image_tensor_class.pt')
+            self.idxComp = PmrIndex('casbert_pmr_component_ids.json',
+                                    'casbert_pmr_component_classes.json',
+                                    'casbert_pmr_component_tensor_class_predicate.pt')
 
         self.clusterer = loadJson(RESOURCE_DIR, RS_CLUSTERER)
         self.sysUnits = Units(RESOURCE_DIR, RS_UNIT)
@@ -170,7 +178,7 @@ class Searcher:
                         varData['cellmlUrl']), self.sysImages.getPath(imageId))]
             # get cellml images from other cellml / workspaces if not found
             if len(cellmlImages) == 0:
-                for similarCellml in similarCellmls:
+                for similarCellml in varData['similarCellmls']:
                     for imageId in self.sysCellmls.getImages(url=similarCellml):
                         imagePath = os.path.join(CURRENT_PATH, WORKSPACE_DIR, os.path.dirname(
                             self.sysCellmls.getPath(url=similarCellml)), self.sysImages.getPath(imageId))

@@ -44,6 +44,8 @@ STEM_LANCASTER = 1
 IS_LOWER = True
 IS_LEMMA = True
 
+URL_CASBERT_INDEX = 'https://auckland.figshare.com/ndownloader/files/37932492'
+
 
 class MATH_FORMAT(Enum):
     """MATH DESTINATION"""
@@ -285,3 +287,32 @@ def mml2tex(text):
         if '\\multicolumn{2}{c}' in latex_code:
             latex_code = latex_code.replace('\\multicolumn{2}{c}', ' & ')
     return latex_code
+
+
+def updateIndexes(filePath=''):
+    import zipfile
+    path = os.path.dirname(os.path.realpath(__file__))
+    if not os.path.exists(filePath):
+        print("... downloading from server")
+        fileUrl = URL_CASBERT_INDEX
+        r = requests.get(fileUrl)
+        print("... extracting data")
+        packz = zipfile.ZipFile(io.BytesIO(r.content))
+        for name in packz.namelist():
+            packz.extract(name, path)
+        print("... done")
+    else:
+        pz = open(filePath, 'rb')
+        packz = zipfile.ZipFile(pz)
+        for name in packz.namelist():
+            packz.extract(name, path)
+        pz.close()
+
+
+def __extractData():
+    path = os.path.dirname(os.path.realpath(__file__))
+    drive = os.path.join(path, RESOURCE_DIR)
+    checkedFile = os.path.join(drive, RS_MATH)
+
+    if not os.path.exists(checkedFile):
+        updateIndexes(os.path.join(drive, 'casbert_data.zip'))

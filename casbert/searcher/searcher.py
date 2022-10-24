@@ -13,21 +13,18 @@ from sentence_transformers import SentenceTransformer, util
 
 
 class PmrIndex:
-    def __init__(self, idsFile, classesFile, tensorClass):
-        self._entityIds = loadJson(RESOURCE_DIR, idsFile)
-        self._entityClasses = {} if classesFile == None else loadJson(
-            RESOURCE_DIR, classesFile)
-        location = os.path.join(CURRENT_PATH, RESOURCE_DIR)
-        self._entityEmbedding = torch.load(
-            location+'/'+tensorClass, map_location=torch.device('cpu'))
+    def __init__(self, index):
+        self._entityIds = index['id']
+        self._entityClasses = index['class']
+        self._entityEmbedding = index['embedding']
 
         BERTModel = 'multi-qa-MiniLM-L6-cos-v1'
         self._model = SentenceTransformer(BERTModel)
 
-    def searchEntities(self, query, topK, minSim):
-        return self._entitySearch(query, topK, minSim)
+    def searchEntities(self, query, topK, minSim, indexType):
+        return self._entitySearch(query, topK, minSim, indexType)
 
-    def _entitySearch(self, query, topK, minSim):
+    def _entitySearch(self, query, topK, minSim, indexType):
         """
         In this approach:
         1. Get vector of query
@@ -37,7 +34,7 @@ class PmrIndex:
         textEmbedding = self._model.encode(query, convert_to_tensor=True)
         # We use cosine-similarity and torch.topk to find the highest top_k scores
         cosScores = util.pytorch_cos_sim(
-            textEmbedding, self._entityEmbedding)[0]
+            textEmbedding, self._entityEmbedding[indexType])[0]
         topResults = torch.topk(cosScores, k=topK)
         results = []
         for rank, (score, idx) in enumerate(zip(topResults[0], topResults[1])):
@@ -71,33 +68,15 @@ class Searcher:
             a list of strings used that are the header columns
         """
         self.algorithm = algorithm
-        if indexType == Searcher.IDX_CLASS:
-            self.idxVar = PmrIndex('casbert_pmr_variable_ids.json',
-                                   'casbert_pmr_variable_classes.json',
-                                   'casbert_pmr_variable_tensor_class.pt')
-            self.idxCellml = PmrIndex('casbert_pmr_cellml_urls.json', None,
-                                      'casbert_pmr_cellml_tensor_class.pt')
-            self.idxSedml = PmrIndex('casbert_pmr_sedml_ids.json', None,
-                                     'casbert_pmr_sedml_tensor_class.pt')
-            self.idxImage = PmrIndex('casbert_pmr_image_ids.json', None,
-                                     'casbert_pmr_image_tensor_class.pt')
-            self.idxComp = PmrIndex('casbert_pmr_component_ids.json',
-                                    'casbert_pmr_component_classes.json',
-                                    'casbert_pmr_component_tensor_class.pt')
-        elif indexType == Searcher.IDX_CLASS_PREDICATE:
-            self.idxVar = PmrIndex('casbert_pmr_variable_ids.json',
-                                   'casbert_pmr_variable_classes.json',
-                                   'casbert_pmr_variable_tensor_class_predicate.pt')
-            self.idxCellml = PmrIndex('casbert_pmr_cellml_urls.json', None,
-                                      'casbert_pmr_cellml_tensor_class.pt')
-            self.idxSedml = PmrIndex('casbert_pmr_sedml_ids.json', None,
-                                     'casbert_pmr_sedml_tensor_class.pt')
-            self.idxImage = PmrIndex('casbert_pmr_image_ids.json', None,
-                                     'casbert_pmr_image_tensor_class.pt')
-            self.idxComp = PmrIndex('casbert_pmr_component_ids.json',
-                                    'casbert_pmr_component_classes.json',
-                                    'casbert_pmr_component_tensor_class_predicate.pt')
+        indexPath = os.path.join(CURRENT_PATH, RESOURCE_DIR, 'casbert_pmr.pt')
+        indexes = torch.load(indexPath, map_location=torch.device('cpu'))
 
+        self.idxVar = PmrIndex(indexes['variable'])
+        self.idxCellml = PmrIndex(indexes['cellml'])
+        self.idxSedml = PmrIndex(indexes['sedml'])
+        self.idxImage = PmrIndex(indexes['image'])
+        self.idxComp = PmrIndex(indexes['component'])
+        
         self.clusterer = loadJson(RESOURCE_DIR, RS_CLUSTERER)
         self.sysUnits = Units(RESOURCE_DIR, RS_UNIT)
         self.sysMaths = Maths(RESOURCE_DIR, RS_MATH)
@@ -108,7 +87,7 @@ class Searcher:
         self.sysCellmls = Cellmls(RESOURCE_DIR, RS_CELLML)
         self.sysImages = Images(RESOURCE_DIR, RS_IMAGE)
 
-    def search(self, query, top=100, minSim=0.5):
+    def search(self, query, top=20, minSim=0.5, indexType='class_predicate'):
         # classify the query vertically
         # queryTypes = self.__classify(query)
 
@@ -120,8 +99,9 @@ class Searcher:
 
         return self.__getVariables(query, top, minSim)
 
-    def __getVariables(self, query, top, minSim):
-        resultVars = self.idxVar.searchEntities(query, topK=top, minSim=minSim)
+    def __getVariables(self, query, top, minSim, indexType):
+        resultVars = self.idxVar.searchEntities(
+            query, topK=top, minSim=minSim, indexType=indexType)
         result = {}
         for varId in resultVars:
             varData = {}
@@ -191,7 +171,7 @@ class Searcher:
 
         return result
 
-    def __searchPlots(self, query, top, minSim):
+    def __searchPlots(self, query, top, minSim, indexType):
         def getVarDataForPlot(varId):
             varData = {}
             varData['name'] = self.sysVars.getName(varId)
@@ -208,7 +188,8 @@ class Searcher:
             varData['rdfLeaves'] = self.sysVars.getObjLeaves(varId)
             return varData
 
-        resultVars = self.idxVar.searchEntities(query, topK=top, minSim=minSim)
+        resultVars = self.idxVar.searchEntities(
+            query, topK=top, minSim=minSim, indexType=indexType)
         resultPlots = {}
         # for each variable, identify the plot and store in a resultPlots
         for varId in resultVars:
@@ -266,7 +247,7 @@ class Searcher:
 
         return resultPlots
 
-    def searchPlots(self, query, top, minSim):
+    def searchPlots(self, query, top=20, minSim=0.5, indexType='class_predicate'):
         def getVarDataForPlot(varId):
             varData = {}
             varData['id'] = varId
@@ -322,13 +303,15 @@ class Searcher:
             result[plot] = plotData
         return {'result': result, 'filter': self.__getFilter(result, 'sedml')}
 
-    def searchVariables(self, query, top, minSim):
-        results = self.idxVar.searchEntities(query, topK=top, minSim=minSim)
+    def searchVariables(self, query, top=20, minSim=0.5, indexType='class_predicate'):
+        results = self.idxVar.searchEntities(
+            query, topK=top, minSim=minSim, indexType=indexType)
         result = [self.getEntityMetadata(varId) for varId in results]
         return {'result': result, 'filter': self.__getFilter(result, 'variable')}
 
-    def searchCellmls(self, query, top, minSim):
-        results = self.idxCellml.searchEntities(query, topK=top, minSim=minSim)
+    def searchCellmls(self, query, top=20, minSim=0.5, indexType='class_predicate'):
+        results = self.idxCellml.searchEntities(
+            query, topK=top, minSim=minSim, indexType=indexType)
         cellmls = []
         for cellmlUrl in results:
             cellml = {'url': PMR_SERVER + cellmlUrl}
@@ -347,8 +330,9 @@ class Searcher:
             cellmls += [cellml]
         return cellmls
 
-    def searchSedmls(self, query, top, minSim):
-        results = self.idxSedml.searchEntities(query, topK=top, minSim=minSim)
+    def searchSedmls(self, query, top=20, minSim=0.5, indexType='class_predicate'):
+        results = self.idxSedml.searchEntities(
+            query, topK=top, minSim=minSim, indexType=indexType)
         sedmls = []
         for id in results:
             sedml = {'url': PMR_SERVER + self.sysSedmls.getUrl(id)}
@@ -364,8 +348,9 @@ class Searcher:
             sedmls += [sedml]
         return sedmls
 
-    def searchImages(self, query, top, minSim):
-        results = self.idxImage.searchEntities(query, topK=top, minSim=minSim)
+    def searchImages(self, query, top=20, minSim=0.5, indexType='class_predicate'):
+        results = self.idxImage.searchEntities(
+            query, topK=top, minSim=minSim, indexType=indexType)
         images = []
         for id in results:
             image = self.sysImages.getData(id)
@@ -384,8 +369,9 @@ class Searcher:
             images += [image]
         return images
 
-    def searchComponents(self, query, top, minSim):
-        results = self.idxComp.searchEntities(query, topK=top, minSim=minSim)
+    def searchComponents(self, query, top=20, minSim=0.5, indexType='class_predicate'):
+        results = self.idxComp.searchEntities(
+            query, topK=top, minSim=minSim, indexType=indexType)
         components = []
         for id in results:
             metadata = {'id': id, 'math': [], 'classes': {}}

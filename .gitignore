@@ -219,10 +219,9 @@ ENV/
 .DS_Store
 
 # exclude other resources
-casbert/resources/sedmlImages/*
-casbert/resources/sedmlResults/*
-casbert/resources/*.json
-casbert/resources/*.pt
-casbert/resources/*.xsl
-casbert/resources/*.graph
-casbert/resources/*.py
+casbert/resources/*
+
+!casbert/resources/.gitkeep
+!casbert/resources/.gitkeep
+!casbert/resources/sedmlImages/.gitkeep
+!casbert/resources/sedmlResults/.gitkeep

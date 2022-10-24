@@ -16,7 +16,6 @@ setuptools.setup(
         'lxml',
         'rdflib',
         'ipython',
-        # 'beautifulsoup4',
         'torch',
         'sentence-transformers',
     ],

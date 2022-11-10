@@ -213,10 +213,8 @@ greek_code2name = {
 }
 
 greek_name2code = {v: k for k, v in greek_code2name.items()}
-
-
-xsl_c2p = etree.parse(os.path.join(CURRENT_PATH, RESOURCE_DIR, RS_C2P_XSL))
-tran_c2p = etree.XSLT(xsl_c2p)
+tran_c2p = None
+tran_m2l = None
 
 
 def m_c2p(math_c, format=MATH_FORMAT.WEB):
@@ -262,10 +260,6 @@ def m_c2p(math_c, format=MATH_FORMAT.WEB):
         if elem.text != None:
             elem.text = elem.text.strip()
     return str(mmldom).replace('·', '&#xB7;').replace('−', '-').replace('<?xml version="1.0"?>', '<?xml version="1.0" encoding="UTF-8"?>')
-
-
-xsl_m2l = etree.parse(os.path.join(CURRENT_PATH, RESOURCE_DIR, RS_M2L_XSL))
-tran_m2l = etree.XSLT(xsl_m2l)
 
 
 def mml2tex(text):
@@ -316,3 +310,12 @@ def __extractData():
 
     if not os.path.exists(checkedFile):
         updateIndexes(os.path.join(drive, 'casbert_data.zip'))
+
+
+def __loadData():
+    xsl_c2p = etree.parse(os.path.join(CURRENT_PATH, RESOURCE_DIR, RS_C2P_XSL))
+    global tran_c2p
+    tran_c2p = etree.XSLT(xsl_c2p)
+    xsl_m2l = etree.parse(os.path.join(CURRENT_PATH, RESOURCE_DIR, RS_M2L_XSL))
+    global tran_m2l
+    tran_m2l = etree.XSLT(xsl_m2l)

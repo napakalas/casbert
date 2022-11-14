@@ -3,8 +3,6 @@ from ..general import CURRENT_PATH, RESOURCE_DIR, WORKSPACE_DIR
 from .pmrcollection import PmrCollection
 import os
 from lxml import etree
-import rdflib
-import urllib.parse as urilib
 
 
 class Cellmls(PmrCollection):

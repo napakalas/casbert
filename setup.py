@@ -14,7 +14,6 @@ setuptools.setup(
     install_requires=[
         'requests',
         'lxml',
-        'rdflib',
         'ipython',
         'torch',
         'sentence-transformers',

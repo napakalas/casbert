@@ -97,7 +97,7 @@ class Searcher:
 
         # return self.__searchPlots(query, top, minSim)
 
-        return self.__getVariables(query, top, minSim)
+        return self.__getVariables(query, top, minSim, indexType=indexType)
 
     def __getVariables(self, query, top, minSim, indexType):
         resultVars = self.idxVar.searchEntities(
@@ -265,7 +265,7 @@ class Searcher:
             return varData
 
         resultVars = self.idxVar.searchEntities(
-            query, topK=2000, minSim=minSim)
+            query, topK=2000, minSim=minSim, indexType=indexType)
         result = {}
 
         validPlots = []
@@ -309,7 +309,7 @@ class Searcher:
         result = [self.getEntityMetadata(varId) for varId in results]
         return {'result': result, 'filter': self.__getFilter(result, 'variable')}
 
-    def searchCellmls(self, query, top=20, minSim=0.5, indexType='class_predicate'):
+    def searchCellmls(self, query, top=20, minSim=0.5, indexType='class'):
         results = self.idxCellml.searchEntities(
             query, topK=top, minSim=minSim, indexType=indexType)
         cellmls = []
@@ -330,7 +330,7 @@ class Searcher:
             cellmls += [cellml]
         return cellmls
 
-    def searchSedmls(self, query, top=20, minSim=0.5, indexType='class_predicate'):
+    def searchSedmls(self, query, top=20, minSim=0.5, indexType='class'):
         results = self.idxSedml.searchEntities(
             query, topK=top, minSim=minSim, indexType=indexType)
         sedmls = []
@@ -348,7 +348,7 @@ class Searcher:
             sedmls += [sedml]
         return sedmls
 
-    def searchImages(self, query, top=20, minSim=0.5, indexType='class_predicate'):
+    def searchImages(self, query, top=20, minSim=0.5, indexType='class'):
         results = self.idxImage.searchEntities(
             query, topK=top, minSim=minSim, indexType=indexType)
         images = []
